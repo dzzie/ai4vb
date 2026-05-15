@@ -1,0 +1,5 @@
+Class CProject
+  Public name As String
+  Public leadName As String
+  Public budget As String
+End Class

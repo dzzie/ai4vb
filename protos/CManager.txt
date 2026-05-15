@@ -1,0 +1,6 @@
+Class CManager
+  Public Users As New Collection
+  Public Projects As New Collection
+  Public Sub addUser(name, age, job)
+  Public Sub addProject(name, leadName, budget)
+End Class

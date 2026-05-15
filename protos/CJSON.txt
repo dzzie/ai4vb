@@ -1,0 +1,19 @@
+Class CJSON
+  Public scJson As Object
+  Public tag
+  Public Property Get getVal(ByVal path As String) As Variant
+  Public Property Let getVal(ByVal path As String, v As Variant)
+  Public Property Get Initilized() As Boolean
+  Public Function getType(ByVal path As String) As String
+  Public Function isArray(ByVal path As String) As Boolean
+  Public Function stringify(Optional ByVal path As String = Empty) As String
+  Public Function enumProps(Optional ByVal path As String = Empty) As Collection
+  Public Property Get jsErr() As String
+  Public Function loadJson(ByVal json As String) As Boolean
+  Public Function GetObjFields(obj As Object, fieldsCSV As String, Optional path As String) As Boolean
+  Public Function GetVal2(ByVal path As String, outVar, Optional CheckExists As Boolean = False) As Boolean
+  Public Function setVal(ByVal path As String, value, Optional CheckExists As Boolean = False) As Boolean
+  Public Function exists(ByVal path As String) As Boolean
+  Public Function beautify(ByVal js As String) As String
+  Public Function beautify2(ByVal js As String, ByRef outVar As String) As Boolean
+End Class

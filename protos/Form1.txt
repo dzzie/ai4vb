@@ -1,0 +1,6 @@
+Class Form1
+  Public Function answer(ByVal x As String) As String
+  Public Function describe(ByRef obj As Variant) As String
+  Public Function alert(x)
+  Public Function unixToDOS(ByVal tmp As String)
+End Class

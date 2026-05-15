@@ -1,0 +1,19 @@
+Class COpenAI
+  Public Function GetApiKey()
+  Public Property Let ApiKey(ByVal value As String)
+  Public Property Get ApiKey() As String
+  Public Property Let Model(ByVal value As String)
+  Public Property Get Model() As String
+  Public Property Let Endpoint(ByVal value As String)
+  Public Property Get Endpoint() As String
+  Public Sub SetTimeoutsMs( ...
+  Public Property Get LastStatus() As Long
+  Public Property Get LastStatusText() As String
+  Public Property Get LastResponseRaw() As String
+  Public Property Get LastError() As String
+  Public Property Get LastResponseId() As String
+  Public Sub ResetContext()
+  Public Function CreateResponse(ByVal inputText As String, Optional ByVal instructions As String = "", Optional ByVal maintainContext As Boolean = False) As String
+  Public Function ExtractOutput(Optional json As String) As String
+  Public Function unixToDOS(ByVal tmp As String)
+End Class

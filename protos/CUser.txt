@@ -1,0 +1,5 @@
+Class CUser
+  Public name As String
+  Public age As String
+  Public job As String
+End Class

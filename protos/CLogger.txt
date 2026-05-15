@@ -1,0 +1,9 @@
+Class CLogger
+  Public Sub OpenLog(ByVal filePath As String, Optional ByVal truncate As Boolean = False)
+  Public Sub CloseLog()
+  Public Sub Section(ByVal title As String)
+  Public Sub Log(ByVal label As String, ByVal value As String)
+  Public Sub WriteLine(ByVal text As String)
+  Public Sub WriteRaw(ByVal text As String)
+  Public Sub Flush()
+End Class

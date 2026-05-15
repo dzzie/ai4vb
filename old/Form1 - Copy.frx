@@ -1,0 +1,16 @@
+ÿ}Please complete BOTH of the following tasks, then emit DONE.
+
+Task 1: Who leads the project with the highest budget, and what is their job?
+
+Task 2: Based on what you see in the project and user data, point out one thing about the project allocation that looks odd or worth a second look. Be specific - name the projects or people involved, and briefly say why it stands out.
+ÿoldestAge = -1;
+oldestUser = null;
+for(i=1;i<=manager.Users.Count();i++){
+  user = manager.Users.Item(i);
+  userAge = parseInt(user.age, 10);
+  if(userAge > oldestAge){
+    oldestAge = userAge;
+    oldestUser = user;
+  }
+ }
+host.alert(oldestUser.name)
