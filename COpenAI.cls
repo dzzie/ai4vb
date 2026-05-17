@@ -20,6 +20,17 @@ Attribute VB_Exposed = False
 
 Option Explicit
  
+Public LastInputTokens As Long
+Public LastOutputTokens As Long
+Public LastCachedTokens As Long
+Public LastReasoningTokens As Long
+
+Public TotalInputTokens As Long
+Public TotalOutputTokens As Long
+Public TotalCachedTokens As Long
+Public TotalReasoningTokens As Long
+Public TotalRequests As Long
+
 Private m_apiKey As String
 Private m_model As String
 Private m_endpoint As String
@@ -51,6 +62,28 @@ Private Declare Function ShellExecute Lib "shell32.dll" Alias "ShellExecuteA" ( 
     ByVal lpDirectory As String, _
     ByVal nShowCmd As Long _
 ) As Long
+
+Private Declare Function CryptBinaryToStringA Lib "crypt32.dll" ( _
+    ByRef pbBinary As Byte, _
+    ByVal cbBinary As Long, _
+    ByVal dwFlags As Long, _
+    ByVal pszString As String, _
+    ByRef pcchString As Long _
+) As Long
+
+' CRYPT_STRING_BASE64    = 1   (with CR/LF line breaks every 64 chars)
+' CRYPT_STRING_NOCRLF    = &H40000000  (suppress line breaks)
+Private Const CRYPT_STRING_BASE64 As Long = 1
+Private Const CRYPT_STRING_NOCRLF As Long = &H40000000
+
+
+Public Sub ResetTokenTotals()
+    TotalInputTokens = 0
+    TotalOutputTokens = 0
+    TotalCachedTokens = 0
+    TotalReasoningTokens = 0
+    TotalRequests = 0
+End Sub
 
 Public Function GetApiKey()
      ShellExecute 0, "open", "https://platform.openai.com/api-keys", vbNullString, vbNullString, 1
@@ -166,7 +199,8 @@ Public Function CreateResponse(ByVal inputText As String, Optional ByVal instruc
     m_lastStatus = CLng(http.Status)
     m_lastStatusText = CStr(http.statusText)
     m_lastResponseRaw = CStr(http.responseText)
-
+    AccumulateUsage
+    
     ' Always capture the response id so the next chained call can use it
     m_lastResponseId = ParseResponseId(m_lastResponseRaw)
 
@@ -176,6 +210,130 @@ Public Function CreateResponse(ByVal inputText As String, Optional ByVal instruc
 
 EH:
     m_lastError = "CreateResponse error: " & Err.Number & " - " & Err.Description
+End Function
+
+' Same semantics as CreateResponse, but the user turn carries an image
+' alongside the text. The image is sent inline as a base64 data URI in
+' an input_image content part. For continuity, OpenAI's previous_response_id
+' carries the image forward server-side — re-sending the bytes on subsequent
+' chained turns is NOT required.
+'
+' detail: "low" | "high" | "auto" (default). "low" downsamples to ~512px
+' for cheaper, faster vision calls when fine detail isn't needed.
+Public Function CreateResponseWithImage( _
+    ByVal inputText As String, _
+    ByVal imagePath As String, _
+    Optional ByVal instructions As String = "", _
+    Optional ByVal maintainContext As Boolean = False, _
+    Optional ByVal asyncMode As Boolean = False, _
+    Optional ByVal detail As String = "auto" _
+) As String
+
+    ClearLast
+    m_cancelRequested = False
+
+    If LenB(m_apiKey) = 0 Then
+        m_lastError = "ApiKey not set."
+        Exit Function
+    End If
+
+    Dim b64 As String
+    b64 = Base64EncodeFile(imagePath)
+    If LenB(b64) = 0 Then
+        ' Base64EncodeFile already populated m_lastError
+        Exit Function
+    End If
+
+    Dim body As String
+    body = BuildRequestJsonWithImage(inputText, instructions, maintainContext, _
+                                     b64, MediaTypeForPath(imagePath), detail)
+
+    On Error GoTo EH
+
+    Dim http As Object
+    Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+
+    Dim r As Long, c As Long, s As Long, v As Long
+    r = IIf(m_toResolve > 0, m_toResolve, 5000)
+    c = IIf(m_toConnect > 0, m_toConnect, 15000)
+    s = IIf(m_toSend > 0, m_toSend, 15000)
+    v = IIf(m_toReceive > 0, m_toReceive, 60000)
+    http.setTimeouts r, c, s, v
+
+    http.Open "POST", Me.Endpoint, asyncMode
+    http.setRequestHeader "Content-Type", "application/json"
+    http.setRequestHeader "Authorization", "Bearer " & m_apiKey
+
+    http.send body
+
+    If asyncMode Then
+        Do While http.readyState <> 4
+            DoEvents
+            Sleep 30
+            If m_cancelRequested Then
+                http.abort
+                m_lastError = "Cancelled"
+                m_lastStatus = 0
+                Exit Function
+            End If
+        Loop
+    End If
+
+    m_lastStatus = CLng(http.Status)
+    m_lastStatusText = CStr(http.statusText)
+    m_lastResponseRaw = CStr(http.responseText)
+    m_lastResponseId = ParseResponseId(m_lastResponseRaw)
+    AccumulateUsage
+    
+    CreateResponseWithImage = m_lastResponseRaw
+    Form1.List1.AddItem m_lastResponseRaw    ' early-testing log, mirrors CreateResponse
+    Exit Function
+
+EH:
+    m_lastError = "CreateResponseWithImage error: " & Err.Number & " - " & Err.Description
+End Function
+
+
+' Builds the /v1/responses body with a multipart input message.
+' Logs a sanitized copy to Form1.List1 — the base64 payload is replaced
+' with "<first10>..." so the listbox doesn't get hosed by a multi-MB blob.
+Private Function BuildRequestJsonWithImage( _
+    ByVal inputText As String, _
+    ByVal instructions As String, _
+    ByVal maintainContext As Boolean, _
+    ByVal b64 As String, _
+    ByVal mediaType As String, _
+    ByVal detail As String _
+) As String
+
+    Dim json As String
+    json = "{""model"":""" & EscapeJsonString(Me.Model) & """"
+    json = json & ",""input"":[{""role"":""user"",""content"":["
+    json = json & "{""type"":""input_text"",""text"":""" & EscapeJsonString(inputText) & """},"
+    json = json & "{""type"":""input_image"",""image_url"":""data:" & mediaType & ";base64," & b64 & """"
+    If LenB(detail) <> 0 And detail <> "auto" Then
+        json = json & ",""detail"":""" & detail & """"
+    End If
+    json = json & "}]}]"
+    If LenB(instructions) <> 0 Then
+        json = json & ",""instructions"":""" & EscapeJsonString(instructions) & """"
+    End If
+    If maintainContext And LenB(m_lastResponseId) <> 0 Then
+        json = json & ",""previous_response_id"":""" & EscapeJsonString(m_lastResponseId) & """"
+    End If
+    json = json & "}"
+    BuildRequestJsonWithImage = json
+
+    ' Sanitized log copy: replace the actual base64 payload with a short
+    ' preview so the listbox stays usable.
+    Dim preview As String
+    If Len(b64) > 10 Then
+        preview = Left$(b64, 10) & "..."
+    Else
+        preview = b64
+    End If
+    Form1.List1.AddItem Replace$(json, b64, preview)
+
 End Function
 
 ' Called from the UI (Cancel button) to abort an in-flight CreateResponse
@@ -282,4 +440,108 @@ End Function
 Private Sub Class_Initialize()
     SetTimeoutsMs
 End Sub
+
+' Reads a file into a byte array and base64-encodes it via crypt32.
+' Returns the encoded string with no line breaks.
+Private Function Base64EncodeFile(ByVal path As String) As String
+
+    Dim hFile As Integer
+    Dim bytes() As Byte
+    Dim fileLen As Long
+
+    On Error GoTo EH
+
+    If LenB(Dir$(path)) = 0 Then
+        m_lastError = "Base64EncodeFile: file not found: " & path
+        Exit Function
+    End If
+
+    hFile = FreeFile
+    Open path For Binary Access Read As #hFile
+    fileLen = LOF(hFile)
+    If fileLen = 0 Then
+        Close #hFile
+        m_lastError = "Base64EncodeFile: file is empty: " & path
+        Exit Function
+    End If
+    ReDim bytes(0 To fileLen - 1)
+    Get #hFile, , bytes
+    Close #hFile
+
+    ' Two-call pattern: first call with NULL string to learn the required
+    ' buffer length, then second call to actually fill it. CryptBinaryToStringA
+    ' returns the length INCLUDING the null terminator, so we trim one off.
+    Dim needed As Long
+    Dim flags As Long
+    flags = CRYPT_STRING_BASE64 Or CRYPT_STRING_NOCRLF
+
+    If CryptBinaryToStringA(bytes(0), fileLen, flags, vbNullString, needed) = 0 Then
+        m_lastError = "Base64EncodeFile: CryptBinaryToStringA (sizing) failed"
+        Exit Function
+    End If
+
+    Dim buf As String
+    buf = String$(needed, vbNullChar)
+    If CryptBinaryToStringA(bytes(0), fileLen, flags, buf, needed) = 0 Then
+        m_lastError = "Base64EncodeFile: CryptBinaryToStringA (encode) failed"
+        Exit Function
+    End If
+
+    ' needed now reflects chars written, NOT including the trailing null.
+    ' (On the second call crypt32 updates pcchString to the actual length.)
+    Base64EncodeFile = Left$(buf, needed)
+    Exit Function
+
+EH:
+    If hFile <> 0 Then Close #hFile
+    m_lastError = "Base64EncodeFile error: " & Err.Number & " - " & Err.Description
+End Function
+
+Private Function MediaTypeForPath(ByVal path As String) As String
+    Dim ext As String
+    Dim dotPos As Long
+    dotPos = InStrRev(path, ".")
+    If dotPos = 0 Then
+        MediaTypeForPath = "image/png"   ' fallback
+        Exit Function
+    End If
+    ext = LCase$(Mid$(path, dotPos + 1))
+    Select Case ext
+        Case "png":           MediaTypeForPath = "image/png"
+        Case "jpg", "jpeg":   MediaTypeForPath = "image/jpeg"
+        Case "gif":           MediaTypeForPath = "image/gif"
+        Case "webp":          MediaTypeForPath = "image/webp"
+        Case Else:            MediaTypeForPath = "image/png"
+    End Select
+End Function
+
+Private Sub AccumulateUsage()
+
+    If m_lastStatus <> 200 Then Exit Sub
+    If LenB(m_lastResponseRaw) = 0 Then Exit Sub
+
+    Dim j As New CJSON
+    If Not j.Initilized Then Exit Sub
+    If Not j.loadJson(m_lastResponseRaw) Then Exit Sub
+    If LenB(CStr(j.getVal("error.type"))) <> 0 Then Exit Sub
+
+    LastInputTokens = CLng(j.getVal("usage.input_tokens"))
+    LastOutputTokens = CLng(j.getVal("usage.output_tokens"))
+    LastCachedTokens = 0
+    LastReasoningTokens = 0
+    If j.exists("usage.input_tokens_details.cached_tokens") Then
+        LastCachedTokens = CLng(j.getVal("usage.input_tokens_details.cached_tokens"))
+    End If
+    If j.exists("usage.output_tokens_details.reasoning_tokens") Then
+        LastReasoningTokens = CLng(j.getVal("usage.output_tokens_details.reasoning_tokens"))
+    End If
+
+    TotalInputTokens = TotalInputTokens + LastInputTokens
+    TotalOutputTokens = TotalOutputTokens + LastOutputTokens
+    TotalCachedTokens = TotalCachedTokens + LastCachedTokens
+    TotalReasoningTokens = TotalReasoningTokens + LastReasoningTokens
+    TotalRequests = TotalRequests + 1
+
+End Sub
+
 
