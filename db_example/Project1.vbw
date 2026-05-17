@@ -1,0 +1,10 @@
+Form1 = 26, 26, 786, 536, Z, 52, 52, 875, 713, C
+COpenAI = 0, 0, 0, 0, C
+CJSON = 0, 0, 0, 0, C
+CClaudeAI = 0, 0, 0, 0, C
+CLogger = 0, 0, 0, 0, C
+CFileSystem2 = 0, 0, 0, 0, C
+CJsonParser = 0, 0, 0, 0, C
+cSQLiteField = 0, 0, 0, 0, C
+cSQLiteTable = 0, 0, 0, 0, C
+modDbHost = 78, 78, 838, 588, 
