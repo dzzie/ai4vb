@@ -1,6 +1,6 @@
 VERSION 5.00
 Object = "{0E59F1D2-1FBE-11D0-8FF2-00A0D10038BC}#1.0#0"; "msscript.ocx"
-Object = "{831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.0#0"; "MSCOMCTL.OCX"
+Object = "{831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.2#0"; "MSCOMCTL.OCX"
 Begin VB.Form Form1 
    Caption         =   "Give AI Access to your programs object model to answer questions for you.  http://sandsprite.com"
    ClientHeight    =   11115
@@ -11,6 +11,38 @@ Begin VB.Form Form1
    ScaleHeight     =   11115
    ScaleWidth      =   10275
    StartUpPosition =   2  'CenterScreen
+   Begin VB.CommandButton cmdCopy 
+      Caption         =   "Copy"
+      Height          =   465
+      Left            =   9270
+      TabIndex        =   22
+      Top             =   4140
+      Width           =   870
+   End
+   Begin VB.TextBox txtOllamaModel 
+      Height          =   330
+      Left            =   3420
+      TabIndex        =   21
+      Text            =   "qwen3:30b"
+      Top             =   810
+      Width           =   1365
+   End
+   Begin VB.TextBox txtOllamaIP 
+      Height          =   285
+      Left            =   1170
+      TabIndex        =   18
+      Text            =   "192.168.0.51"
+      Top             =   855
+      Width           =   1320
+   End
+   Begin VB.OptionButton optOLlama 
+      Caption         =   "ollama"
+      Height          =   285
+      Left            =   3915
+      TabIndex        =   17
+      Top             =   3330
+      Width           =   915
+   End
    Begin VB.CheckBox chkAsync 
       Caption         =   "async"
       Height          =   255
@@ -18,16 +50,16 @@ Begin VB.Form Form1
       TabIndex        =   16
       Top             =   3360
       Value           =   1  'Checked
-      Width           =   1155
+      Width           =   750
    End
    Begin VB.TextBox txtAgentPrompt 
-      Height          =   2115
-      Left            =   900
+      Height          =   2025
+      Left            =   1125
       MultiLine       =   -1  'True
       ScrollBars      =   2  'Vertical
       TabIndex        =   14
       Text            =   "Form1.frx":0000
-      Top             =   1020
+      Top             =   1260
       Width           =   8235
    End
    Begin VB.CommandButton cmdCancel 
@@ -75,23 +107,23 @@ Begin VB.Form Form1
    Begin VB.CommandButton cmdAgentTest 
       Caption         =   "Agentic Test"
       Height          =   255
-      Left            =   5700
+      Left            =   6030
       TabIndex        =   9
-      Top             =   3360
+      Top             =   3375
       Width           =   1575
    End
-   Begin VB.OptionButton Option2 
+   Begin VB.OptionButton optClaude 
       Caption         =   "Claude"
       Height          =   255
-      Left            =   3660
+      Left            =   2835
       TabIndex        =   8
-      Top             =   3360
+      Top             =   3375
       Width           =   1335
    End
    Begin VB.OptionButton OptChatGpt 
       Caption         =   "ChatGpt"
       Height          =   255
-      Left            =   2280
+      Left            =   1755
       TabIndex        =   7
       Top             =   3360
       Value           =   -1  'True
@@ -107,9 +139,9 @@ Begin VB.Form Form1
    End
    Begin VB.TextBox txtClaudeKey 
       Height          =   255
-      Left            =   1200
+      Left            =   1170
       TabIndex        =   5
-      Top             =   600
+      Top             =   540
       Width           =   8055
    End
    Begin VB.TextBox txtOut 
@@ -145,12 +177,28 @@ Begin VB.Form Form1
       Top             =   120
       Width           =   7995
    End
+   Begin VB.Label Label2 
+      Caption         =   "Model: "
+      Height          =   240
+      Left            =   2790
+      TabIndex        =   20
+      Top             =   855
+      Width           =   915
+   End
+   Begin VB.Label Label1 
+      Caption         =   "Ollama IP:"
+      Height          =   195
+      Left            =   180
+      TabIndex        =   19
+      Top             =   900
+      Width           =   960
+   End
    Begin VB.Label Label4 
       Caption         =   "Prompt"
       Height          =   255
-      Left            =   240
+      Left            =   270
       TabIndex        =   15
-      Top             =   1020
+      Top             =   1260
       Width           =   1215
    End
    Begin VB.Label Label3 
@@ -211,6 +259,7 @@ Attribute VB_Exposed = False
 
 Option Explicit
 
+Dim lama As New COllama
 Dim ai As New COpenAI
 Dim claude As New CClaudeAI
 Dim mgr As New CManager
@@ -226,6 +275,12 @@ Private m_agentRunning As Boolean
 Private m_agentCancelled As Boolean
 
  
+Private Sub cmdCopy_Click()
+    On Error Resume Next
+    Clipboard.Clear
+    Clipboard.SetText txtOut.text
+End Sub
+
  Private Sub Form_Load()
     On Error Resume Next
     txtApiKey = GetSetting("ai4vb", "chatgpt", "key")
@@ -349,9 +404,15 @@ Private Sub cmdAgentTest_Click()
     If OptChatGpt.value Then
         Set agentAI = ai
         agentLabel = "ChatGPT"
-    Else
+    ElseIf optClaude.value Then
         Set agentAI = claude
         agentLabel = "Claude"
+    Else
+        Set agentAI = lama
+        agentLabel = "Ollama"
+        lama.RemoteIP = txtOllamaIP
+        lama.Model = txtOllamaModel
+        lama.Think = True
     End If
     
     agentAI.ResetContext   ' new conversation chain per run
@@ -423,7 +484,7 @@ Private Sub cmdAgentTest_Click()
 
         jsScript = Trim$(agentAI.ExtractOutput())
         log.log "AI -> script", jsScript
-
+  
         List1.AddItem "AI JS: " & Left$(jsScript, 80) & IIf(Len(jsScript) > 80, "...", "")
 
         ' Check for completion signal
@@ -465,6 +526,13 @@ Private Sub cmdAgentTest_Click()
             log.log "JS result", result
             txtOut.text = txtOut.text & "Stage " & stage & ": " & result & vbCrLf
             lastResult = result
+            
+            
+            If optOLlama.value Then
+               txtOut.text = txtOut.text & "OLLAMA REASONING: " & lama.LastThinking
+               log.log "OLLAMA REASONING: ", lama.LastThinking
+            End If
+          
         End If
 
         log.Flush   ' so you can tail agent.log while it runs
