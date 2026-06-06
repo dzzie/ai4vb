@@ -13,6 +13,7 @@ Module=modProtoGen; modProtoGen.bas
 Class=CProject; CProject.cls
 Class=CFileSystem2; CFileSystem2.cls
 Class=COllama; COllama.cls
+Class=CGemini; CGemini.cls
 IconForm="Form1"
 Startup="Form1"
 ExeName32="Project1.exe"

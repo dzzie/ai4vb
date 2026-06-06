@@ -1,0 +1,8 @@
+frmAiChatRoom = 26, 26, 796, 466, Z, 52, 52, 948, 757, C
+CClaudeAI = 78, 78, 822, 623, 
+CGemini = 0, 0, 0, 0, C
+CJSON = 0, 0, 0, 0, C
+COllama = 156, 156, 900, 701, 
+COpenAI = 0, 0, 0, 0, C
+Module1 = 104, 104, 848, 649, 
+CFileSystem2 = 0, 0, 0, 0, C

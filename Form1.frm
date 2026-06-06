@@ -11,6 +11,65 @@ Begin VB.Form Form1
    ScaleHeight     =   11115
    ScaleWidth      =   10275
    StartUpPosition =   2  'CenterScreen
+   Begin VB.Frame Frame1 
+      BorderStyle     =   0  'None
+      Height          =   285
+      Left            =   5895
+      TabIndex        =   27
+      Top             =   810
+      Width           =   3300
+      Begin VB.OptionButton optGem 
+         Caption         =   "3.1 Pro"
+         Height          =   195
+         Index           =   2
+         Left            =   2115
+         TabIndex        =   30
+         Top             =   45
+         Value           =   -1  'True
+         Width           =   825
+      End
+      Begin VB.OptionButton optGem 
+         Caption         =   "3.5 Flash"
+         Height          =   195
+         Index           =   1
+         Left            =   1125
+         TabIndex        =   29
+         Top             =   45
+         Width           =   1005
+      End
+      Begin VB.OptionButton optGem 
+         Caption         =   "2.5 Flash"
+         Height          =   285
+         Index           =   0
+         Left            =   90
+         TabIndex        =   28
+         Top             =   0
+         Width           =   1140
+      End
+   End
+   Begin VB.OptionButton optGemini 
+      Caption         =   "Gemini"
+      Height          =   330
+      Left            =   4995
+      TabIndex        =   26
+      Top             =   3285
+      Width           =   960
+   End
+   Begin VB.TextBox txtGeminiKey 
+      Height          =   255
+      Left            =   1185
+      TabIndex        =   24
+      Top             =   855
+      Width           =   4590
+   End
+   Begin VB.CommandButton cmdSetGemini 
+      Caption         =   "Set"
+      Height          =   315
+      Left            =   9315
+      TabIndex        =   23
+      Top             =   855
+      Width           =   915
+   End
    Begin VB.CommandButton cmdCopy 
       Caption         =   "Copy"
       Height          =   465
@@ -24,7 +83,7 @@ Begin VB.Form Form1
       Left            =   3420
       TabIndex        =   21
       Text            =   "qwen3:30b"
-      Top             =   810
+      Top             =   1215
       Width           =   1365
    End
    Begin VB.TextBox txtOllamaIP 
@@ -32,7 +91,7 @@ Begin VB.Form Form1
       Left            =   1170
       TabIndex        =   18
       Text            =   "192.168.0.51"
-      Top             =   855
+      Top             =   1260
       Width           =   1320
    End
    Begin VB.OptionButton optOLlama 
@@ -53,13 +112,13 @@ Begin VB.Form Form1
       Width           =   750
    End
    Begin VB.TextBox txtAgentPrompt 
-      Height          =   2025
+      Height          =   1620
       Left            =   1125
       MultiLine       =   -1  'True
       ScrollBars      =   2  'Vertical
       TabIndex        =   14
       Text            =   "Form1.frx":0000
-      Top             =   1260
+      Top             =   1665
       Width           =   8235
    End
    Begin VB.CommandButton cmdCancel 
@@ -134,7 +193,7 @@ Begin VB.Form Form1
       Height          =   315
       Left            =   9300
       TabIndex        =   6
-      Top             =   660
+      Top             =   495
       Width           =   915
    End
    Begin VB.TextBox txtClaudeKey 
@@ -177,12 +236,30 @@ Begin VB.Form Form1
       Top             =   120
       Width           =   7995
    End
+   Begin VB.Label lblGemini 
+      Caption         =   "Gemini  Key"
+      BeginProperty Font 
+         Name            =   "MS Sans Serif"
+         Size            =   8.25
+         Charset         =   0
+         Weight          =   400
+         Underline       =   -1  'True
+         Italic          =   0   'False
+         Strikethrough   =   0   'False
+      EndProperty
+      ForeColor       =   &H00FF0000&
+      Height          =   255
+      Left            =   135
+      TabIndex        =   25
+      Top             =   915
+      Width           =   915
+   End
    Begin VB.Label Label2 
       Caption         =   "Model: "
       Height          =   240
       Left            =   2790
       TabIndex        =   20
-      Top             =   855
+      Top             =   1260
       Width           =   915
    End
    Begin VB.Label Label1 
@@ -190,15 +267,15 @@ Begin VB.Form Form1
       Height          =   195
       Left            =   180
       TabIndex        =   19
-      Top             =   900
+      Top             =   1305
       Width           =   960
    End
    Begin VB.Label Label4 
       Caption         =   "Prompt"
       Height          =   255
-      Left            =   270
+      Left            =   225
       TabIndex        =   15
-      Top             =   1260
+      Top             =   1710
       Width           =   1215
    End
    Begin VB.Label Label3 
@@ -259,6 +336,7 @@ Attribute VB_Exposed = False
 
 Option Explicit
 
+Dim gemini As New CGemini
 Dim lama As New COllama
 Dim ai As New COpenAI
 Dim claude As New CClaudeAI
@@ -281,6 +359,11 @@ Private Sub cmdCopy_Click()
     Clipboard.SetText txtOut.text
 End Sub
 
+Private Sub cmdSetGemini_Click()
+    SaveSetting "ai4vb", "gemini", "key", txtGeminiKey
+    gemini.ApiKey = txtGeminiKey
+End Sub
+
  Private Sub Form_Load()
     On Error Resume Next
     txtApiKey = GetSetting("ai4vb", "chatgpt", "key")
@@ -288,6 +371,9 @@ End Sub
     txtClaudeKey = GetSetting("ai4vb", "claude", "key")
     claude.ApiKey = txtClaudeKey.text
 
+    txtGeminiKey = GetSetting("ai4vb", "gemini", "key")
+    gemini.ApiKey = txtGeminiKey.text
+    
     ' --- build some fake data ---
     mgr.addUser "Roger", "50", "Security Researcher"
     mgr.addUser "Alice", "32", "Malware Analyst"
@@ -341,6 +427,12 @@ Public Function describe(ByRef obj As Variant) As String
     Exit Function
 EH:
     describe = "ERROR: describe() failed: " & Err.Number & " " & Err.Description
+End Function
+
+Function gemModelIndex() As gemAiModel
+    If optGem(0).value Then gemModelIndex = gem_2_5_flash_lite
+    If optGem(1).value Then gemModelIndex = gem_3_5_flash
+    If optGem(2).value Then gemModelIndex = gem_3_1_pro
 End Function
 
 Private Sub cmdAgentTest_Click()
@@ -407,24 +499,28 @@ Private Sub cmdAgentTest_Click()
     ElseIf optClaude.value Then
         Set agentAI = claude
         agentLabel = "Claude"
-    Else
+    ElseIf optOLlama.value Then
         Set agentAI = lama
         agentLabel = "Ollama"
         lama.RemoteIP = txtOllamaIP
         lama.Model = txtOllamaModel
-        lama.Think = True
+        lama.think = True
+    Else
+        Set agentAI = gemini
+        agentLabel = "Gemini"
+        gemini.SetModel gemModelIndex()
     End If
+    
+    List1.Clear
+    txtOut.text = Empty
+    hadError = False
+    lastResult = ""
     
     agentAI.ResetContext   ' new conversation chain per run
     log.log "agent backend", agentLabel & " (model: " & agentAI.Model & ")"
 
     userMsg = txtAgentPrompt
     log.log "initial task", userMsg
-
-    List1.Clear
-    txtOut.text = Empty
-    hadError = False
-    lastResult = ""
 
     For stage = 1 To MAX_STAGES
 
@@ -595,6 +691,7 @@ End Function
 Private Sub Form_Unload(Cancel As Integer)
      SaveSetting "ai4vb", "chatgpt", "key", txtApiKey
      SaveSetting "ai4vb", "claude", "key", txtClaudeKey
+     SaveSetting "ai4vb", "gemini", "key", txtGeminiKey
 End Sub
 
 Private Sub Label3_Click()
@@ -614,6 +711,10 @@ Function unixToDOS(ByVal tmp As String)
     unixToDOS = tmp
 End Function
 
+Private Sub lblGemini_Click()
+    gemini.GetApiKey
+End Sub
+
 Private Sub List1_Click()
     On Error Resume Next
     Dim s As String, js As New CJSON
@@ -629,4 +730,8 @@ End Sub
 
 Private Sub mnuRegen_Click()
      modProtoGen.RegenerateProtos App.path & "\Project1.vbp"
+End Sub
+
+Private Sub optGem_Click(Index As Integer)
+    gemini.SetModel Index 'we aligned the label name with the enum value
 End Sub

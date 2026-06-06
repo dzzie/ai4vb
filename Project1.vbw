@@ -8,4 +8,5 @@ CLogger = 130, 130, 890, 666,
 modProtoGen = 130, 130, 895, 666, 
 CProject = 182, 182, 942, 718, 
 CFileSystem2 = 78, 78, 947, 614, 
-COllama = 182, 182, 952, 622, C
+COllama = 182, 182, 952, 622, 
+CGemini = 78, 78, 848, 518, 
