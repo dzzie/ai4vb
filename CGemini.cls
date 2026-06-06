@@ -173,8 +173,15 @@ Function LoadSavedApiKey() As String
 End Function
 
 Function SaveApiKey(Optional ByVal key As String)
-    If Len(key) = 0 Then key = m_apiKey
+    If Len(key) = 0 Then
+        If Len(m_apiKey) = 0 Then
+            key = InputBox("Enter Gemini API Key")
+        Else
+            key = m_apiKey
+        End If
+    End If
     Call SaveSetting("ai4vb", "gemini", "key", key)
+    m_apiKey = key
 End Function
 
 Public Property Let ApiKey(ByVal value As String): m_apiKey = Trim$(value): End Property
@@ -690,7 +697,7 @@ Private Function BuildRequestJsonWithImage( _
     Else
         preview = b64
     End If
-    Form1.List1.AddItem Replace$(json, b64, preview)
+    form1.List1.AddItem Replace$(json, b64, preview)
 
 End Function
 

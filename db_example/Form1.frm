@@ -1,6 +1,6 @@
 VERSION 5.00
 Object = "{0E59F1D2-1FBE-11D0-8FF2-00A0D10038BC}#1.0#0"; "msscript.ocx"
-Object = "{831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.0#0"; "MSCOMCTL.OCX"
+Object = "{831FDD16-0C5C-11D2-A9FC-0000F8754DA1}#2.2#0"; "MSCOMCTL.OCX"
 Begin VB.Form Form1 
    Caption         =   "ai4vb (db mode): AI agent exploring a SQLite database.  http://sandsprite.com"
    ClientHeight    =   11115
@@ -246,10 +246,9 @@ Private m_agentCancelled As Boolean
 
 Private Sub Form_Load()
     On Error Resume Next
-    txtApiKey = GetSetting("ai4vb", "chatgpt", "key")
-    ai.ApiKey = txtApiKey.text
-    txtClaudeKey = GetSetting("ai4vb", "claude", "key")
-    claude.ApiKey = txtClaudeKey.text
+    
+    txtApiKey = ai.ApiKey
+    txtClaudeKey = claude.ApiKey
 
     txtAgentPrompt = "Who logs the most hours on the highest-budget project, and what is their role?"
     
@@ -542,13 +541,11 @@ Private Sub cmdCancel_Click()
 End Sub
 
 Private Sub cmdSetApiKey_Click()
-    SaveSetting "ai4vb", "chatgpt", "key", txtApiKey
-    ai.ApiKey = txtApiKey.text
+    ai.SaveApiKey txtApiKey.text
 End Sub
 
 Private Sub cmdSetClaudeKey_Click()
-    SaveSetting "ai4vb", "claude", "key", txtClaudeKey
-    claude.ApiKey = txtClaudeKey.text
+    claude.SaveApiKey txtClaudeKey.text
 End Sub
 
 
@@ -557,8 +554,8 @@ Function alert(x)
 End Function
 
 Private Sub Form_Unload(Cancel As Integer)
-     SaveSetting "ai4vb", "chatgpt", "key", txtApiKey
-     SaveSetting "ai4vb", "claude", "key", txtClaudeKey
+    ai.SaveApiKey txtApiKey.text
+    claude.SaveApiKey txtClaudeKey.text
 End Sub
 
 Private Sub Label3_Click()

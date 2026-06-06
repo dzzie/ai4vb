@@ -6,6 +6,7 @@ Class=CClaudeAI; ..\CClaudeAI.cls
 Class=CFileSystem2; ..\CFileSystem2.cls
 Class=CJSON; ..\CJSON.cls
 Class=CLogger; ..\CLogger.cls
+IconForm="Form1"
 Startup="Form1"
 ExeName32="Project1.exe"
 Command32=""

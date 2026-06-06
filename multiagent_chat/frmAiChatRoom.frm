@@ -51,7 +51,6 @@ Begin VB.Form frmAiChatRoom
       _ExtentX        =   15425
       _ExtentY        =   9075
       _Version        =   393217
-      Enabled         =   -1  'True
       ScrollBars      =   2
       TextRTF         =   $"frmAiChatRoom.frx":0000
       BeginProperty Font {0BE35203-8F91-11CE-9DE3-00AA004BB851} 
@@ -191,7 +190,7 @@ Private Sub InitAgents()
     Dim lama As New COllama
 '
     ' --- AGENT_1: Claude ---
-    claude.ApiKey = GetSetting("ai4vb", "claude", "key")
+    If Not claude.isApiKeySet Then claude.SaveApiKey 'will prompt if not yet set..
     'claude.Model = "claude-opus-4-8"
     claude.SetTimeoutsMs 5000, 15000, 15000, 120000
     AddAgent claude, "Claude", "the PROPONENT -- argue FOR the idea, surface its strongest upside"
@@ -199,14 +198,14 @@ Private Sub InitAgents()
     
     
     ' --- AGENT_2: Chatgpt ---
-    chat.ApiKey = GetSetting("ai4vb", "chatgpt", "key")
+    If Not chat.isApiKeySet Then chat.SaveApiKey
     'chat.Model = "gemini-3.5-flash"
     chat.SetTimeoutsMs 5000, 15000, 15000, 120000
     AddAgent chat, "chatGPT", "the SKEPTIC -- attack the weakest part of whatever has been said"
     If Len(chat.ApiKey) = 0 Then List1.AddItem "ChatGPT API key not set!"
         
     ' --- AGENT_2: Gemini ---
-    gem.ApiKey = GetSetting("ai4vb", "gemini", "key")
+    If Not gem.isApiKeySet Then gem.SaveApiKey
     gem.SetModel gem_2_5_flash_lite
     gem.SetTimeoutsMs 5000, 15000, 15000, 120000
     AddAgent gem, "gemini", "the PRAGMATIST -- only concrete what-would-you-actually-do specifics"

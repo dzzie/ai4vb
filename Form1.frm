@@ -360,19 +360,16 @@ Private Sub cmdCopy_Click()
 End Sub
 
 Private Sub cmdSetGemini_Click()
-    SaveSetting "ai4vb", "gemini", "key", txtGeminiKey
-    gemini.ApiKey = txtGeminiKey
+    gemini.SaveApiKey txtGeminiKey
 End Sub
 
  Private Sub Form_Load()
     On Error Resume Next
-    txtApiKey = GetSetting("ai4vb", "chatgpt", "key")
-    ai.ApiKey = txtApiKey.text
-    txtClaudeKey = GetSetting("ai4vb", "claude", "key")
-    claude.ApiKey = txtClaudeKey.text
-
-    txtGeminiKey = GetSetting("ai4vb", "gemini", "key")
-    gemini.ApiKey = txtGeminiKey.text
+    
+    'loaded in class_load
+    txtApiKey = ai.ApiKey
+    txtClaudeKey = claude.ApiKey
+    txtGeminiKey = gemini.ApiKey
     
     ' --- build some fake data ---
     mgr.addUser "Roger", "50", "Security Researcher"
@@ -504,7 +501,7 @@ Private Sub cmdAgentTest_Click()
         agentLabel = "Ollama"
         lama.RemoteIP = txtOllamaIP
         lama.Model = txtOllamaModel
-        lama.think = True
+        lama.Think = True
     Else
         Set agentAI = gemini
         agentLabel = "Gemini"
@@ -669,29 +666,27 @@ Private Sub cmdCancel_Click()
     On Error Resume Next
     ai.Cancel
     claude.Cancel
+    gemini.Cancel
+    lama.Cancel
     On Error GoTo 0
 End Sub
 
 Private Sub cmdSetApiKey_Click()
-    SaveSetting "ai4vb", "chatgpt", "key", txtApiKey
-    ai.ApiKey = txtApiKey.text
+    ai.SaveApiKey txtApiKey.text
 End Sub
 
 Private Sub cmdSetClaudeKey_Click()
-    ' Was saving txtApiKey (ChatGPT box) into the claude slot — fixed.
-    SaveSetting "ai4vb", "claude", "key", txtClaudeKey
-    claude.ApiKey = txtClaudeKey.text
+    claude.SaveApiKey txtClaudeKey.text
 End Sub
- 
 
 Function alert(x)
     MsgBox x
 End Function
 
 Private Sub Form_Unload(Cancel As Integer)
-     SaveSetting "ai4vb", "chatgpt", "key", txtApiKey
-     SaveSetting "ai4vb", "claude", "key", txtClaudeKey
-     SaveSetting "ai4vb", "gemini", "key", txtGeminiKey
+     ai.SaveApiKey txtApiKey
+     claude.SaveApiKey txtClaudeKey
+     gemini.SaveApiKey txtGeminiKey
 End Sub
 
 Private Sub Label3_Click()

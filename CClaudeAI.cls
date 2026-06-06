@@ -92,6 +92,27 @@ Public Function GetApiKey()
     ShellExecute 0, "open", "https://console.anthropic.com/settings/keys", vbNullString, vbNullString, 1
 End Function
 
+Function isApiKeySet() As Boolean
+    isApiKeySet = (Len(m_apiKey) > 0)
+End Function
+
+Function LoadSavedApiKey() As String
+    m_apiKey = GetSetting("ai4vb", "claude", "key")
+    LoadSavedApiKey = m_apiKey
+End Function
+
+Function SaveApiKey(Optional ByVal key As String)
+    If Len(key) = 0 Then
+        If Len(m_apiKey) = 0 Then
+            key = InputBox("Enter Claude API Key")
+        Else
+            key = m_apiKey
+        End If
+    End If
+    Call SaveSetting("ai4vb", "claude", "key", key)
+    m_apiKey = key
+End Function
+
 Public Property Let ApiKey(ByVal value As String): m_apiKey = Trim$(value): End Property
 Public Property Get ApiKey() As String: ApiKey = m_apiKey: End Property
 
@@ -357,6 +378,7 @@ Private Sub Class_Initialize()
     SetTimeoutsMs
     Set m_historyRoles = New Collection
     Set m_historyTexts = New Collection
+    LoadSavedApiKey
 End Sub
 
 
@@ -581,7 +603,7 @@ Private Function BuildRequestJsonWithImage( _
     Else
         preview = b64
     End If
-    Form1.List1.AddItem Replace$(json, b64, preview)
+    form1.List1.AddItem Replace$(json, b64, preview)
 
 End Function
 

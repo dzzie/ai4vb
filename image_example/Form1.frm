@@ -223,23 +223,19 @@ Private Sub Label3_Click()
 End Sub
 
 Private Sub cmdSetApiKey_Click()
-    SaveSetting "ai4vb", "chatgpt", "key", txtApiKey
-    ai.ApiKey = txtApiKey.text
+    ai.SaveApiKey txtApiKey.text
 End Sub
 
 Private Sub cmdSetClaudeKey_Click()
-    SaveSetting "ai4vb", "claude", "key", txtClaudeKey
-    claude.ApiKey = txtClaudeKey.text
+    claude.SaveApiKey txtClaudeKey.text
 End Sub
 
 Private Sub Form_Load()
     On Error Resume Next
     txtImage = App.path & "\image1.jpg"
     txtReq = "what is this? what color is it? Should I eat it if a witch gave it to me?"
-    txtApiKey = GetSetting("ai4vb", "chatgpt", "key")
-    ai.ApiKey = txtApiKey.text
-    txtClaudeKey = GetSetting("ai4vb", "claude", "key")
-    claude.ApiKey = txtClaudeKey.text
+    txtApiKey = ai.ApiKey
+    txtClaudeKey = claude.ApiKey
 End Sub
 
 Function unixToDOS(ByVal tmp As String)

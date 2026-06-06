@@ -89,6 +89,26 @@ Public Function GetApiKey()
      ShellExecute 0, "open", "https://platform.openai.com/api-keys", vbNullString, vbNullString, 1
 End Function
 
+Function isApiKeySet() As Boolean
+    isApiKeySet = (Len(m_apiKey) > 0)
+End Function
+
+Function LoadSavedApiKey() As String
+    m_apiKey = GetSetting("ai4vb", "chatgpt", "key")
+    LoadSavedApiKey = m_apiKey
+End Function
+
+Function SaveApiKey(Optional ByVal key As String)
+    If Len(key) = 0 Then
+        If Len(m_apiKey) = 0 Then
+            key = InputBox("Enter Chatgpt API Key")
+        Else
+            key = m_apiKey
+        End If
+    End If
+    Call SaveSetting("ai4vb", "chatgpt", "key", key)
+    m_apiKey = key
+End Function
 
 Public Property Let ApiKey(ByVal value As String): m_apiKey = Trim$(value): End Property
 Public Property Get ApiKey() As String: ApiKey = m_apiKey: End Property
@@ -205,7 +225,7 @@ Public Function CreateResponse(ByVal inputText As String, Optional ByVal instruc
     m_lastResponseId = ParseResponseId(m_lastResponseRaw)
 
     CreateResponse = m_lastResponseRaw
-    Form1.List1.AddItem m_lastResponseRaw 'for early testing only
+    form1.List1.AddItem m_lastResponseRaw 'for early testing only
     Exit Function
 
 EH:
@@ -286,7 +306,7 @@ Public Function CreateResponseWithImage( _
     AccumulateUsage
     
     CreateResponseWithImage = m_lastResponseRaw
-    Form1.List1.AddItem m_lastResponseRaw    ' early-testing log, mirrors CreateResponse
+    form1.List1.AddItem m_lastResponseRaw    ' early-testing log, mirrors CreateResponse
     Exit Function
 
 EH:
@@ -332,7 +352,7 @@ Private Function BuildRequestJsonWithImage( _
     Else
         preview = b64
     End If
-    Form1.List1.AddItem Replace$(json, b64, preview)
+    form1.List1.AddItem Replace$(json, b64, preview)
 
 End Function
 
@@ -354,7 +374,7 @@ Private Function BuildRequestJson(ByVal inputText As String, ByVal instructions 
     End If
     json = json & "}"
     BuildRequestJson = json
-    Form1.List1.AddItem json 'jsut for testing...
+    form1.List1.AddItem json 'jsut for testing...
 End Function
 
 ' Lightweight id extractor — avoids spinning up CJSON just for one field.
@@ -439,6 +459,7 @@ End Function
 
 Private Sub Class_Initialize()
     SetTimeoutsMs
+    LoadSavedApiKey
 End Sub
 
 ' Reads a file into a byte array and base64-encodes it via crypt32.
