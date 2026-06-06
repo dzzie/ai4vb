@@ -163,6 +163,20 @@ Public Function GetApiKey()
     ShellExecute 0, "open", "https://aistudio.google.com/apikey", vbNullString, vbNullString, 1
 End Function
 
+Function isApiKeySet() As Boolean
+    isApiKeySet = (Len(m_apiKey) > 0)
+End Function
+
+Function LoadSavedApiKey() As String
+    m_apiKey = GetSetting("ai4vb", "gemini", "key")
+    LoadSavedApiKey = m_apiKey
+End Function
+
+Function SaveApiKey(Optional ByVal key As String)
+    If Len(key) = 0 Then key = m_apiKey
+    Call SaveSetting("ai4vb", "gemini", "key", key)
+End Function
+
 Public Property Let ApiKey(ByVal value As String): m_apiKey = Trim$(value): End Property
 Public Property Get ApiKey() As String: ApiKey = m_apiKey: End Property
 
@@ -191,8 +205,8 @@ Public Property Get MaxTokens() As Long: MaxTokens = m_maxTokens: End Property
 
 ' When True, request thought summaries so LastThinking is populated.
 ' Does NOT disable reasoning (Gemini 3.x always reasons) -- see ThinkingLevel.
-Public Property Let think(ByVal value As Boolean): m_think = value: End Property
-Public Property Get think() As Boolean: think = m_think: End Property
+Public Property Let Think(ByVal value As Boolean): m_think = value: End Property
+Public Property Get Think() As Boolean: Think = m_think: End Property
 
 ' "" | "low" | "high". Emits generationConfig.thinkingConfig.thinkingLevel
 ' (3.x idiom). For 2.5-series models swap to thinkingBudget. Empty = default.
@@ -350,15 +364,15 @@ Private Function GenerationConfigFragment() As String
         need = True
     End If
 
-    Dim think As String
-    If m_think Then think = """includeThoughts"":true"
+    Dim Think As String
+    If m_think Then Think = """includeThoughts"":true"
     If LenB(m_thinkingLevel) <> 0 Then
-        If LenB(think) <> 0 Then think = think & ","
-        think = think & """thinkingLevel"":""" & m_thinkingLevel & """"
+        If LenB(Think) <> 0 Then Think = Think & ","
+        Think = Think & """thinkingLevel"":""" & m_thinkingLevel & """"
     End If
-    If LenB(think) <> 0 Then
+    If LenB(Think) <> 0 Then
         If need Then inner = inner & ","
-        inner = inner & """thinkingConfig"":{" & think & "}"
+        inner = inner & """thinkingConfig"":{" & Think & "}"
         need = True
     End If
 
@@ -468,6 +482,7 @@ Private Sub Class_Initialize()
     Set m_historyRoles = New Collection
     Set m_historyTexts = New Collection
     SetModel gem_3_5_flash
+    LoadSavedApiKey
 End Sub
 
 
