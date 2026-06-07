@@ -1,149 +1,108 @@
 # ai4vb
 
-**Agentic AI for VB6.** An AI agent loop running inside a VB6 host that can introspect and reason about a live VB6 object model. Point ChatGPT or Claude at any VB6 project, and the agent discovers its classes via auto-generated proto files, queries live instances through a JScript bridge, and answers questions about the data — all from inside the IDE.
+**Agentic AI for VB6.** A small, swappable multi-provider AI client suite for VB6, plus a set of examples that put a model to work against live things — an object graph, a database, an image, several models at once, a photo library. The unifying idea: give a model direct access to something live and stay out of its way. Cloud or fully local.
 
-The framework is the load-bearing structure. The prompt is where the work actually happens.
+
+Note: each AI class still has a Form1.list1.additem call for debugging, you can just nuke it, ive kept it so far 
+
+---
+
+## Repository layout
+
+The base classes live at the root — the reusable AI client suite, shared by everything. Each example is a peer folder that builds its own host, prompt, and domain on top of them. No example is privileged; they're five different domains driven by the same backends.
+
+```
+/                      base classes: the four AI backend clients + CJSON, CLogger, CFileSystem2
+/1_automation_example  agent over a live VB6 object graph via the JScript bridge   (see its README)
+/2_db_example          agent given dynamic access to a SQLite database through the app
+/3_image_example       upload an image, ask a question about it
+/4_multiagent_chat     round-robin debate across multiple backends
+/5_img_tagging         resumable image-catalog + vision-tagging app
+```
 
 ---
 
 ## What it does
 
-An AI agent emits JScript one stage at a time. The VB6 host evaluates each script against a live, in-memory object graph and feeds the result back to the AI for the next stage. The AI discovers what's in the object graph by calling `host.describe(obj)`, which returns a proto description auto-generated from the project's source. After enough discovery, the AI computes an answer, delivers it via `host.answer(...)`, and emits `DONE`.
+ai4vb is two things at once:
 
-Both OpenAI's `/v1/responses` (with `previous_response_id` chaining) and Anthropic's `/v1/messages` (with client-maintained history, since their API is stateless) are supported polymorphically. Same code, same prompt, swap backends via radio button.
+- **A multi-provider AI client suite** — four backend clients behind one interface, swappable without touching the code that uses them.
+- **Five worked examples** — different ways to hand a model live access to data and let it answer questions, from reasoning over VB6 objects to cataloging a folder of photos.
+
+Four backends sit behind one interface. Each example wires in whichever it needs:
+
+- **OpenAI** — `/v1/responses`, server-side context via `previous_response_id`.
+- **Anthropic** — `/v1/messages`, client-maintained history (their API is stateless).
+- **Google Gemini** — native `generateContent`.
+- **Ollama** — local `/api/chat`, no API key, nothing leaves the box.
+
+That last one carries weight: with Ollama the entire loop — model, data, images, reasoning — runs on your own hardware. Sensitive structures never touch a cloud service, there's no key in the product, and no service that can be discontinued.
+
+The deepest pattern here — an iterative loop where the model drives a live object graph through a JScript bridge — is demonstrated by `1_automation_example`. Its mechanics (the run loop, the `host.describe` contract, the earned gotchas) live in that folder's own README.
 
 ---
 
-## The pieces
+## The base classes
+
+The reusable substrate at the root. Everything else is built per example.
 
 | File | Role |
 |---|---|
-| `Form1.frm` | UI host. Contains the agent loop, ScriptControl, regen button, cancel button, progress bar. |
 | `COpenAI.cls` | OpenAI client. Async HTTP with poll-loop and cancel support. Uses `previous_response_id` for context. |
 | `CClaudeAI.cls` | Anthropic client. Same surface as COpenAI; maintains conversation history in-memory because Anthropic's API is stateless. |
+| `CGemini.cls` | Google Gemini client. Native `generateContent`; auth via `x-goog-api-key`, model in the URL path, vision via `inline_data`. |
+| `COllama.cls` | Local Ollama client. Native `/api/chat`, keyless, `stream:false`; vision via base64 image array. Localhost or a remote box via the `RemoteIP` property. |
 | `CJSON.cls` | JSON parser/path-accessor over ScriptControl. |
 | `CLogger.cls` | Append-only logger with timestamps and section headers. Every run produces a re-readable trail. |
-| `CManager.cls`, `CUser.cls`, `CProject.cls` | Test domain. Replace with your own model in real use. |
-| `modProtoGen.bas` | Source-parses the `.vbp` + each `.cls`/`.frm` and writes `./protos/<ClassName>.txt`. |
-| `prompt.txt` | System prompt for the agent. Hardened against specific JScript/MSScriptControl gotchas. |
-| `./protos/` | Auto-generated descriptions of every public class in the project. Regenerated on demand via the Regen button. |
-| `./agent.log` | Full trace of the last N agent runs. Every prompt, script, error, and elapsed time. |
+| `CFileSystem2.cls` | File/folder helpers (exists, read, enumerate). |
 
 ---
 
 ## The two layers
 
-**The framework layer (this codebase):** delivers a live object model to an AI agent. Handles introspection, dispatch, context, retries, cancellation, logging. Backend-agnostic. Domain-agnostic. Reusable across any VB6 project with a class hierarchy.
+**The framework layer (the base classes):** a swappable multi-provider AI client suite plus the utilities every example leans on — JSON parsing, logging, filesystem access. Backend-agnostic, domain-agnostic.
 
-**The prompt layer (`prompt.txt` + the questions you ask):** what the AI is told about the environment, and what you ask it. This is where domain expertise plugs in. The prompt currently encodes a handful of hard-won environment gotchas (see below); the questions you write are yours.
+**The example layer:** each folder adds its own host form, prompt, domain, and — where it uses the JScript bridge — its own bridge module (`modProtoGen` in the automation example, `modDbHost` in the db example). This is where domain expertise plugs in.
 
 The framework doesn't try to make the AI smart. It tries to give the AI everything it needs and stay out of the way.
 
 ---
 
-## How a run works
+## The examples
 
-```
-[user clicks Agentic Test]
-    │
-    ▼
-cmdAgentTest_Click
-    │
-    ├── select backend (radio button: ChatGPT or Claude)
-    ├── reset conversation context
-    ├── open log file
-    ├── lock agent button, unlock cancel, prime progress bar
-    │
-    └── for stage in 1..MAX_STAGES:
-          │
-          ├── send user message to AI (async HTTP, polls with DoEvents)
-          ├── receive JScript
-          ├── reset JScript engine (hermetic per stage)
-          ├── re-bind manager + host
-          ├── sc.Eval(jsScript)
-          ├── capture result or error
-          ├── log everything
-          │
-          ├── if AI returned "DONE" → exit
-          ├── if HTTP error or cancelled → exit
-          └── otherwise build next user message:
-                - on JS error: send error + failed script
-                - on success: send "Result: [...] If done, DONE."
-```
+Five domains, one set of base classes. Each folder is self-contained with its own host form, prompt, and supporting modules.
 
----
+**`1_automation_example/`** — the original demo and the reference implementation of the core pattern: an agent reasoning over a live VB6 object graph (`CManager` / `CUser` / `CProject`) through a JScript bridge, backed by any of the four clients. The run loop, the introspection contract, and the prompt gotchas are documented in its own README.
 
-## The introspection contract
+**`2_db_example/`** — gives the AI dynamic access to a SQLite database through the app to answer user questions about the data. `modDbHost` exposes the live DB to the bridge (`cSQLiteTable`, `cSQLiteField`, `CJsonParser`); the agent introspects tables and columns and queries through the host rather than walking a hand-built object graph. Proof the "model" can be a data source, not just VB classes.
 
-The AI doesn't know what's in your object graph. It learns by calling:
+**`3_image_example/`** — the simplest case. Upload an image and ask a user question about it: image in, answer out, one shot through the backend clients. No agent loop, no bridge — the minimal multimodal path.
 
-```js
-host.describe(manager)                       // returns CManager proto
-host.describe(manager.Users.Item(1))         // returns CUser proto
-host.describe(manager.Projects.Item(1))      // returns CProject proto
-```
+**`4_multiagent_chat/`** — `frmAiChatRoom`: several backends in a round-robin debate over one shared transcript, each assigned a fixed role under an anti-convergence prompt, with mid-run user interjection. Where the single-agent loop reasons, this one argues — and one agent catching another's fabricated statistic turned out to be an emergent feature, not a designed one.
 
-`host.describe` reads `./protos/<TypeName(obj)>.txt`, which is generated by `modProtoGen` from your `.vbp` and source files. The proto mirrors VB6 syntax with bodies stripped:
+**`5_img_tagging/`** — a complete image-catalog application (a direct VB6 app on the base clients — no bridge). `CImageCatalog` recursively scans a folder, MD5-hashes each file (`modHash`), tags it with a vision model (local qwen2.5-vl via Ollama, or Gemini), and stores everything in SQLite (`images.db`), searchable by tag. Two-phase and resumable: a mechanical scan pass, then a separate AI classify pass you can stop and restart over thousands of images. The prompt is tuned to name the primary subject first and refuse invented scene tags — earned from watching the model miss the car and the house and hallucinate "outdoor" onto studio shots.
 
-```
-Class CProject
-  Public name As String
-  Public leadName As String
-  Public budget As String
-End Class
-```
-
-There is no per-class `describeSelf()` method to write or maintain. The source is the source of truth. Regenerate after schema changes by clicking the Regen button.
-
----
-
-## Prompt gotchas (earned, not theorized)
-
-Each section in `prompt.txt` corresponds to a real failure mode observed in a real log. Worth knowing they exist:
-
-- **`.Count()` needs parens, `.Count` does not work.** MSScriptControl binds VB Collection's `Count` as a method, not a property, despite the typelib. Empirically confirmed; the model burned 12+ stages trying to recover before we added this rule.
-- **JScript runs hermetically per stage.** `sc.Reset` between stages. Variables don't persist; the AI was told and stopped relying on it.
-- **String vs number comparison.** `"85000" > "420000"` is `true` in JScript because it's lexicographic. The proto honestly shows `Public budget As String`; the prompt now warns the AI to `parseFloat` numeric-looking strings before comparing.
-- **For-in doesn't enumerate COM members.** Use `host.describe()` instead.
-- **Multi-task DONE.** When a single user message has multiple tasks, DONE means all of them. Each gets its own `host.answer`.
+A longer writeup of the underlying approach is in `Agentic_Coding_Against_Live_Object_Models.pdf`.
 
 ---
 
 ## Setup
 
-1. Open `Project1.vbp` in VB6.
-2. Set your API keys in the form (one per backend) and click each Set button. Keys persist to the registry.
-3. Click the Regen button to generate `./protos/`. Click it again after any class structure changes.
-4. Type a question in `txtAgentPrompt`.
-5. Select ChatGPT or Claude via the radio buttons.
-6. Click Agentic Test.
-
-The log file `./agent.log` will contain the full trace. Watch the progress bar; click Cancel to abort mid-run.
-
----
-
-## Adapting to your own VB6 project
-
-1. Drop your classes into a project that includes `modProtoGen`, `COpenAI`, `CClaudeAI`, `CJSON`, `CLogger`, and a Form1-style host.
-2. Replace `mgr` in `Form1` with your root domain object (or add an additional `sc.AddObject` call inside the agent loop's per-stage rebind).
-3. Click Regen.
-4. Ask questions.
-
-The framework is class-agnostic. It works whatever your domain is, as long as every class you want introspected is listed in the `.vbp` as a `Class=` or `Form=` entry.
+Each example is self-contained. Open its `Project1.vbp` in VB6, set your API keys in the form (one per cloud backend; keys persist to the registry, Ollama needs ip/model), pick a backend, and run. The bridge examples (automation, db) also need a Regen to generate their protos. See each example's own notes for the specifics.
 
 ---
 
 ## What this is not
 
-- Not a chatbot. The agent runs to completion or to MAX_STAGES; it's not for free-form conversation.
-- Not a code generator. It introspects and reasons about live data, not source files.
-- Not async-first. The HTTP layer is async with polling, but the agent loop is otherwise synchronous and runs on the UI thread.
-- Not a typelib reflector. It uses source-parsed protos rather than `ITypeInfo`, because Standard EXE VB6 projects don't register typelibs and this works the same on Standard EXE, ActiveX EXE, and ActiveX DLL alike.
+- Not a chatbot. The single-agent examples run to completion or to MAX_STAGES; they're not for free-form conversation. (The multi-agent room is the one deliberate exception.)
+- Not a code generator. The agent introspects and reasons about live data, not source files.
+- Not async-first. The HTTP layer is async with polling, but the agent loops are otherwise synchronous and run on the UI thread.
+- Not a typelib reflector. The bridge examples use source-parsed protos rather than `ITypeInfo`, because Standard EXE VB6 projects don't register typelibs and this works the same on Standard EXE, ActiveX EXE, and ActiveX DLL alike.
 
 ---
 
 ## Status
 
-Roger is still the oldest user. Carol still leads Sentinel.
+The framework is solid and has outgrown its original single example. Tested end-to-end across the cloud and local backends on single-task and multi-task prompts. Self-discovery works (the agent finds new classes added to a project without prompt updates). Cancel works. Hermetic per-stage execution works. Logging captures enough for full post-hoc debugging.
 
-The framework is solid. The system has been tested end-to-end with both backends on single-task and multi-task prompts. Self-discovery works (the AI finds new classes added to the project without prompt updates). Cancel works. Hermetic per-stage execution works. Logging captures enough for full post-hoc debugging.
+The pattern has now been carried — unchanged at the core — onto a live object graph, a database, a vision model, a resumable cataloging pipeline, and a multi-agent room. Which was the whole bet: deliver a live model to the agent and stay out of the way.
