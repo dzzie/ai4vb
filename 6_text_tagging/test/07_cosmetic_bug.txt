@@ -1,0 +1,4 @@
+Minor thing -- on the Settings page the "Save" button overlaps the footer text
+when the window is narrow (below about 600px wide). It does not break anything,
+the button still works fine, it just looks a little off. Seen on Chrome on
+Windows 11. Figured you would want to know.

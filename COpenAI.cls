@@ -128,7 +128,7 @@ Public Sub SetTimeoutsMs( _
     Optional ByVal resolveMs As Long = 5000, _
     Optional ByVal connectMs As Long = 15000, _
     Optional ByVal sendMs As Long = 15000, _
-    Optional ByVal receiveMs As Long = 60000 _
+    Optional ByVal receiveMs As Long = 120000 _
 )
     m_toResolve = resolveMs
     m_toConnect = connectMs
@@ -225,7 +225,7 @@ Public Function CreateResponse(ByVal inputText As String, Optional ByVal instruc
     m_lastResponseId = ParseResponseId(m_lastResponseRaw)
 
     CreateResponse = m_lastResponseRaw
-    form1.List1.AddItem m_lastResponseRaw 'for early testing only
+    Form1.List1.AddItem m_lastResponseRaw 'for early testing only
     Exit Function
 
 EH:
@@ -306,7 +306,7 @@ Public Function CreateResponseWithImage( _
     AccumulateUsage
     
     CreateResponseWithImage = m_lastResponseRaw
-    form1.List1.AddItem m_lastResponseRaw    ' early-testing log, mirrors CreateResponse
+    Form1.List1.AddItem m_lastResponseRaw    ' early-testing log, mirrors CreateResponse
     Exit Function
 
 EH:
@@ -352,7 +352,7 @@ Private Function BuildRequestJsonWithImage( _
     Else
         preview = b64
     End If
-    form1.List1.AddItem Replace$(json, b64, preview)
+    Form1.List1.AddItem Replace$(json, b64, preview)
 
 End Function
 
@@ -374,7 +374,7 @@ Private Function BuildRequestJson(ByVal inputText As String, ByVal instructions 
     End If
     json = json & "}"
     BuildRequestJson = json
-    form1.List1.AddItem json 'jsut for testing...
+    Form1.List1.AddItem json 'jsut for testing...
 End Function
 
 ' Lightweight id extractor — avoids spinning up CJSON just for one field.

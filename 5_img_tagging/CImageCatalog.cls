@@ -145,7 +145,7 @@ Public Function Scan(ByVal folderPath As String, Optional ByVal recursive As Boo
                 m_dbRs.CloseRS
                 If CStr(existSig) <> newSig Then
                     ' content changed -> re-hash, reset tags so it gets re-classified
-                    m_db.ExecUpdate "images", "id = " & CLng(existId), _
+                    m_db.ExecUpdate "images", "where id = " & CLng(existId), _
                         "size,mtime,md5,tags,classified,model,tagged_at", _
                         sz, mt, md5, Null, 0, Null, Null
                     changed = changed + 1
@@ -206,7 +206,7 @@ Public Function ClassifyPending(ByRef ai As Object, Optional ByVal maxFiles As L
         RaiseEvent Progress("classify", i, total, p)
 
         If Not m_fso.FileExists(p) Then
-            m_db.ExecUpdate "images", "id = " & id, "classified", -1
+            m_db.ExecUpdate "images", "where id = " & id, "classified", -1
             RaiseEvent LogMsg("missing: " & p)
         Else
             ai.CreateResponseWithImage CLASSIFY_PROMPT, p, "", False, True

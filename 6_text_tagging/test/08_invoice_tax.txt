@@ -1,0 +1,7 @@
+Subject: Reissue invoice #4471 with VAT details
+
+Our finance team needs invoice #4471 reissued to show our company VAT number and
+to break out the tax amount separately from the subtotal. As it stands they
+cannot process the reimbursement internally. Could you regenerate it with those
+two changes? We are closing out the quarter, so within the next couple of weeks
+would be a big help. No other issues -- the service itself is working fine.

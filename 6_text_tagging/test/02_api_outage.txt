@@ -1,0 +1,9 @@
+Subject: Production API returning 500s since 09:00 UTC
+
+Our entire checkout flow is down. Every call to /v2/orders has returned HTTP 500
+with an empty body since around 09:00 UTC this morning. We changed nothing on
+our side -- no deploys, no config changes. This is costing us real revenue every
+minute it stays down and customers are abandoning carts.
+
+We need an engineer looking at this now, not a ticket number in a queue. Your
+status page still shows all systems green, which honestly makes it worse.

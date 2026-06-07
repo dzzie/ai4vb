@@ -1,6 +1,6 @@
 # ai4vb
 
-**Agentic AI for VB6.** A small, swappable multi-provider AI client suite for VB6, plus a set of examples that put a model to work against live things — an object graph, a database, an image, several models at once, a photo library. The unifying idea: give a model direct access to something live and stay out of its way. Cloud or fully local.
+**Agentic AI for VB6.** A small, swappable multi-provider AI client suite for VB6, plus a set of examples that put a model to work against live things — an object graph, a database, an image, several models at once, a photo library, a folder of documents. The unifying idea: give a model direct access to something live and stay out of its way. Cloud or fully local.
 
 
 Note: each AI class still has a Form1.list1.additem call for debugging, you can just nuke it, ive kept it so far 
@@ -9,7 +9,7 @@ Note: each AI class still has a Form1.list1.additem call for debugging, you can 
 
 ## Repository layout
 
-The base classes live at the root — the reusable AI client suite, shared by everything. Each example is a peer folder that builds its own host, prompt, and domain on top of them. No example is privileged; they're five different domains driven by the same backends.
+The base classes live at the root — the reusable AI client suite, shared by everything. Each example is a peer folder that builds its own host, prompt, and domain on top of them. No example is privileged; they're six different domains driven by the same backends.
 
 ```
 /                      base classes: the four AI backend clients + CJSON, CLogger, CFileSystem2
@@ -18,6 +18,7 @@ The base classes live at the root — the reusable AI client suite, shared by ev
 /3_image_example       upload an image, ask a question about it
 /4_multiagent_chat     round-robin debate across multiple backends
 /5_img_tagging         resumable image-catalog + vision-tagging app
+/6_text_tagging        resumable text-catalog + structured-output extraction app
 ```
 
 ---
@@ -27,7 +28,7 @@ The base classes live at the root — the reusable AI client suite, shared by ev
 ai4vb is two things at once:
 
 - **A multi-provider AI client suite** — four backend clients behind one interface, swappable without touching the code that uses them.
-- **Five worked examples** — different ways to hand a model live access to data and let it answer questions, from reasoning over VB6 objects to cataloging a folder of photos.
+- **Six worked examples** — different ways to hand a model live access to data and let it answer questions, from reasoning over VB6 objects to cataloging a folder of photos to pulling structured fields out of a stack of documents.
 
 Four backends sit behind one interface. Each example wires in whichever it needs:
 
@@ -70,7 +71,7 @@ The framework doesn't try to make the AI smart. It tries to give the AI everythi
 
 ## The examples
 
-Five domains, one set of base classes. Each folder is self-contained with its own host form, prompt, and supporting modules.
+Six domains, one set of base classes. Each folder is self-contained with its own host form, prompt, and supporting modules.
 
 **`1_automation_example/`** — the original demo and the reference implementation of the core pattern: an agent reasoning over a live VB6 object graph (`CManager` / `CUser` / `CProject`) through a JScript bridge, backed by any of the four clients. The run loop, the introspection contract, and the prompt gotchas are documented in its own README.
 
@@ -81,6 +82,8 @@ Five domains, one set of base classes. Each folder is self-contained with its ow
 **`4_multiagent_chat/`** — `frmAiChatRoom`: several backends in a round-robin debate over one shared transcript, each assigned a fixed role under an anti-convergence prompt, with mid-run user interjection. Where the single-agent loop reasons, this one argues — and one agent catching another's fabricated statistic turned out to be an emergent feature, not a designed one.
 
 **`5_img_tagging/`** — a complete image-catalog application (a direct VB6 app on the base clients — no bridge). `CImageCatalog` recursively scans a folder, MD5-hashes each file (`modHash`), tags it with a vision model (local qwen2.5-vl via Ollama, or Gemini), and stores everything in SQLite (`images.db`), searchable by tag. Two-phase and resumable: a mechanical scan pass, then a separate AI classify pass you can stop and restart over thousands of images. The prompt is tuned to name the primary subject first and refuse invented scene tags — earned from watching the model miss the car and the house and hallucinate "outdoor" onto studio shots.
+
+**`6_text_tagging/`** — the text sibling of `5_img_tagging` (a direct VB6 app on the base clients — no bridge). `CTextCatalog` scans a folder of text files, MD5-hashes each (shared `modHash`), and runs each through a **schema-constrained extraction** prompt: the model returns a JSON object — category, priority, sentiment, summary, keywords — which the harness parses with `CJSON`, validates against the allowed enum values, and stores in SQLite (`docs.db`), searchable by category or keyword. Two-phase and resumable like the image app. The load-bearing idea is that the harness never trusts the model's format: it strips markdown fences, coerces any out-of-range enum to a fallback, and records both a `valid` flag and the raw JSON, so a model that emits malformed output is caught and auditable rather than silently wrong. A bundled labeled test set run through four backends made the point — the models agreed on the categorization; what separated them was JSON well-formedness and priority calibration, not comprehension.
 
 A longer writeup of the underlying approach is in `Agentic_Coding_Against_Live_Object_Models.pdf`.
 
@@ -105,4 +108,4 @@ Each example is self-contained. Open its `Project1.vbp` in VB6, set your API key
 
 The framework is solid and has outgrown its original single example. Tested end-to-end across the cloud and local backends on single-task and multi-task prompts. Self-discovery works (the agent finds new classes added to a project without prompt updates). Cancel works. Hermetic per-stage execution works. Logging captures enough for full post-hoc debugging.
 
-The pattern has now been carried — unchanged at the core — onto a live object graph, a database, a vision model, a resumable cataloging pipeline, and a multi-agent room. Which was the whole bet: deliver a live model to the agent and stay out of the way.
+The pattern has now been carried — unchanged at the core — onto a live object graph, a database, a vision model, two resumable cataloging pipelines (image and text), and a multi-agent room. Which was the whole bet: deliver a live model to the agent and stay out of the way.
