@@ -57,7 +57,7 @@ Public TotalOutputTokens As Long
 Public TotalCachedTokens As Long
 Public TotalRequests As Long
 
-
+Private cjs As New CJSON
 Private m_apiKey As String
 Private m_model As String
 Private m_endpoint As String        ' base; model + ":generateContent" appended per call
@@ -263,7 +263,7 @@ Public Function CreateResponse(ByVal inputText As String, Optional ByVal systemP
     m_cancelRequested = False
 
     Dim escapedUser As String
-    escapedUser = EscapeJsonString(inputText)
+    escapedUser = cjs.EscapeJsonString(inputText)
 
     Dim body As String
     body = BuildRequestJson(escapedUser, systemPrompt, maintainContext)
@@ -312,7 +312,7 @@ Public Function CreateResponse(ByVal inputText As String, Optional ByVal systemP
         modelText = ExtractOutput()
         If LenB(modelText) > 0 Then
             m_historyRoles.Add "model"
-            m_historyTexts.Add EscapeJsonString(modelText)
+            m_historyTexts.Add cjs.EscapeJsonString(modelText)
         End If
     End If
 
@@ -333,6 +333,7 @@ End Sub
 Private Function BuildRequestJson(ByVal escapedUser As String, ByVal systemPrompt As String, ByVal maintainContext As Boolean) As String
 
     Dim json As String
+    
     json = "{""contents"":["
 
     Dim first As Boolean
@@ -352,7 +353,7 @@ Private Function BuildRequestJson(ByVal escapedUser As String, ByVal systemPromp
     json = json & "]"
 
     If LenB(systemPrompt) <> 0 Then
-        json = json & ",""systemInstruction"":{""parts"":[{""text"":""" & EscapeJsonString(systemPrompt) & """}]}"
+        json = json & ",""systemInstruction"":{""parts"":[{""text"":""" & cjs.EscapeJsonString(systemPrompt) & """}]}"
     End If
 
     json = json & GenerationConfigFragment()
@@ -388,19 +389,6 @@ Private Function GenerationConfigFragment() As String
     Else
         GenerationConfigFragment = ""
     End If
-End Function
-
-Private Function EscapeJsonString(ByVal s As String) As String
-    Dim t As String
-    t = s
-    t = Replace$(t, "\", "\\")
-    t = Replace$(t, """", "\""")
-    t = Replace$(t, vbCrLf, "\n")
-    t = Replace$(t, vbCr, "\n")
-    t = Replace$(t, vbLf, "\n")
-    t = Replace$(t, vbTab, "\t")
-    t = Replace$(t, Chr$(0), "")
-    EscapeJsonString = t
 End Function
 
 ' Extracts the answer text from candidates[0].content.parts, skipping any
@@ -589,7 +577,7 @@ Public Function CreateResponseWithImage( _
     mt = MediaTypeForPath(imagePath)
 
     Dim escapedUser As String
-    escapedUser = EscapeJsonString(inputText)
+    escapedUser = cjs.EscapeJsonString(inputText)
 
     Dim body As String
     body = BuildRequestJsonWithImage(escapedUser, systemPrompt, maintainContext, b64, mt)
@@ -638,7 +626,7 @@ Public Function CreateResponseWithImage( _
         modelText = ExtractOutput()
         If LenB(modelText) > 0 Then
             m_historyRoles.Add "model"
-            m_historyTexts.Add EscapeJsonString(modelText)
+            m_historyTexts.Add cjs.EscapeJsonString(modelText)
         End If
     End If
 
@@ -660,6 +648,7 @@ Private Function BuildRequestJsonWithImage( _
 ) As String
 
     Dim json As String
+    
     json = "{""contents"":["
 
     Dim first As Boolean
@@ -682,7 +671,7 @@ Private Function BuildRequestJsonWithImage( _
     json = json & "]"
 
     If LenB(systemPrompt) <> 0 Then
-        json = json & ",""systemInstruction"":{""parts"":[{""text"":""" & EscapeJsonString(systemPrompt) & """}]}"
+        json = json & ",""systemInstruction"":{""parts"":[{""text"":""" & cjs.EscapeJsonString(systemPrompt) & """}]}"
     End If
 
     json = json & GenerationConfigFragment()

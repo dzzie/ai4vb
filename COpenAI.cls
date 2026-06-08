@@ -31,6 +31,7 @@ Public TotalCachedTokens As Long
 Public TotalReasoningTokens As Long
 Public TotalRequests As Long
 
+Private cjs As New CJSON
 Private m_apiKey As String
 Private m_model As String
 Private m_endpoint As String
@@ -327,19 +328,20 @@ Private Function BuildRequestJsonWithImage( _
 ) As String
 
     Dim json As String
-    json = "{""model"":""" & EscapeJsonString(Me.Model) & """"
+ 
+    json = "{""model"":""" & cjs.EscapeJsonString(Me.Model) & """"
     json = json & ",""input"":[{""role"":""user"",""content"":["
-    json = json & "{""type"":""input_text"",""text"":""" & EscapeJsonString(inputText) & """},"
+    json = json & "{""type"":""input_text"",""text"":""" & cjs.EscapeJsonString(inputText) & """},"
     json = json & "{""type"":""input_image"",""image_url"":""data:" & mediaType & ";base64," & b64 & """"
     If LenB(detail) <> 0 And detail <> "auto" Then
         json = json & ",""detail"":""" & detail & """"
     End If
     json = json & "}]}]"
     If LenB(instructions) <> 0 Then
-        json = json & ",""instructions"":""" & EscapeJsonString(instructions) & """"
+        json = json & ",""instructions"":""" & cjs.EscapeJsonString(instructions) & """"
     End If
     If maintainContext And LenB(m_lastResponseId) <> 0 Then
-        json = json & ",""previous_response_id"":""" & EscapeJsonString(m_lastResponseId) & """"
+        json = json & ",""previous_response_id"":""" & cjs.EscapeJsonString(m_lastResponseId) & """"
     End If
     json = json & "}"
     BuildRequestJsonWithImage = json
@@ -365,12 +367,13 @@ End Sub
 
 Private Function BuildRequestJson(ByVal inputText As String, ByVal instructions As String, ByVal maintainContext As Boolean) As String
     Dim json As String
-    json = "{""model"":""" & EscapeJsonString(Me.Model) & """,""input"":""" & EscapeJsonString(inputText) & """"
+    
+    json = "{""model"":""" & cjs.EscapeJsonString(Me.Model) & """,""input"":""" & cjs.EscapeJsonString(inputText) & """"
     If LenB(instructions) <> 0 Then
-        json = json & ",""instructions"":""" & EscapeJsonString(instructions) & """"
+        json = json & ",""instructions"":""" & cjs.EscapeJsonString(instructions) & """"
     End If
     If maintainContext And LenB(m_lastResponseId) <> 0 Then
-        json = json & ",""previous_response_id"":""" & EscapeJsonString(m_lastResponseId) & """"
+        json = json & ",""previous_response_id"":""" & cjs.EscapeJsonString(m_lastResponseId) & """"
     End If
     json = json & "}"
     BuildRequestJson = json
@@ -394,18 +397,18 @@ Private Function ParseResponseId(ByVal json As String) As String
     ParseResponseId = Mid$(json, pos, endPos - pos)
 End Function
 
-Private Function EscapeJsonString(ByVal s As String) As String
-    Dim t As String
-    t = s
-    t = Replace$(t, "\", "\\")
-    t = Replace$(t, """", "\""")
-    t = Replace$(t, vbCrLf, "\n")
-    t = Replace$(t, vbCr, "\n")
-    t = Replace$(t, vbLf, "\n")
-    t = Replace$(t, vbTab, "\t")
-    t = Replace$(t, Chr$(0), "")
-    EscapeJsonString = t
-End Function
+'Private Function EscapeJsonString(ByVal s As String) As String
+'    Dim t As String
+'    t = s
+'    t = Replace$(t, "\", "\\")
+'    t = Replace$(t, """", "\""")
+'    t = Replace$(t, vbCrLf, "\n")
+'    t = Replace$(t, vbCr, "\n")
+'    t = Replace$(t, vbLf, "\n")
+'    t = Replace$(t, vbTab, "\t")
+'    t = Replace$(t, Chr$(0), "")
+'    EscapeJsonString = t
+'End Function
 
 Function ExtractOutput(Optional json As String) As String
     

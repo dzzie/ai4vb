@@ -28,7 +28,7 @@ Public TotalOutputTokens As Long
 Public TotalCachedTokens As Long
 Public TotalRequests As Long
 
-
+Private cjs As New CJSON
 Private m_apiKey As String
 Private m_model As String
 Private m_endpoint As String
@@ -184,6 +184,7 @@ End Sub
 '                  DoEvents dispatches other UI events.
 Public Function CreateResponse(ByVal inputText As String, Optional ByVal systemPrompt As String = "", Optional ByVal maintainContext As Boolean = False, Optional ByVal asyncMode As Boolean = False) As String
 
+   
     ClearLast
     m_cancelRequested = False
 
@@ -195,7 +196,7 @@ Public Function CreateResponse(ByVal inputText As String, Optional ByVal systemP
     ' Pre-escape the new user message; we'll need it both for the request
     ' body and (on success) for the history.
     Dim escapedUser As String
-    escapedUser = EscapeJsonString(inputText)
+    escapedUser = cjs.EscapeJsonString(inputText)
 
     Dim body As String
     body = BuildRequestJson(escapedUser, systemPrompt, maintainContext)
@@ -255,7 +256,7 @@ Public Function CreateResponse(ByVal inputText As String, Optional ByVal systemP
         assistantText = ExtractOutput()    ' uses m_lastResponseRaw
         If LenB(assistantText) > 0 Then
             m_historyRoles.Add "assistant"
-            m_historyTexts.Add EscapeJsonString(assistantText)
+            m_historyTexts.Add cjs.EscapeJsonString(assistantText)
         End If
     End If
 
@@ -281,11 +282,13 @@ End Sub
 ' systemPrompt - raw (unescaped) system prompt; we escape here
 ' maintainContext - whether to include the historical messages
 Private Function BuildRequestJson(ByVal escapedUser As String, ByVal systemPrompt As String, ByVal maintainContext As Boolean) As String
+    
     Dim json As String
-    json = "{""model"":""" & EscapeJsonString(Me.Model) & """"
+    
+    json = "{""model"":""" & cjs.EscapeJsonString(Me.Model) & """"
     json = json & ",""max_tokens"":" & Me.MaxTokens
     If LenB(systemPrompt) <> 0 Then
-        json = json & ",""system"":""" & EscapeJsonString(systemPrompt) & """"
+        json = json & ",""system"":""" & cjs.EscapeJsonString(systemPrompt) & """"
     End If
 
     json = json & ",""messages"":["
@@ -307,19 +310,6 @@ Private Function BuildRequestJson(ByVal escapedUser As String, ByVal systemPromp
 
     json = json & "]}"
     BuildRequestJson = json
-End Function
-
-Private Function EscapeJsonString(ByVal s As String) As String
-    Dim t As String
-    t = s
-    t = Replace$(t, "\", "\\")
-    t = Replace$(t, """", "\""")
-    t = Replace$(t, vbCrLf, "\n")
-    t = Replace$(t, vbCr, "\n")
-    t = Replace$(t, vbLf, "\n")
-    t = Replace$(t, vbTab, "\t")
-    t = Replace$(t, Chr$(0), "")
-    EscapeJsonString = t
 End Function
 
 ' Extracts the assistant text from Anthropic's response.
@@ -482,7 +472,8 @@ Public Function CreateResponseWithImage( _
     End If
 
     Dim escapedUser As String
-    escapedUser = EscapeJsonString(inputText)
+    
+    escapedUser = cjs.EscapeJsonString(inputText)
 
     Dim body As String
     body = BuildRequestJsonWithImage(escapedUser, systemPrompt, maintainContext, _
@@ -543,7 +534,7 @@ Public Function CreateResponseWithImage( _
         assistantText = ExtractOutput()
         If LenB(assistantText) > 0 Then
             m_historyRoles.Add "assistant"
-            m_historyTexts.Add EscapeJsonString(assistantText)
+            m_historyTexts.Add cjs.EscapeJsonString(assistantText)
         End If
     End If
 
@@ -567,10 +558,11 @@ Private Function BuildRequestJsonWithImage( _
 ) As String
 
     Dim json As String
-    json = "{""model"":""" & EscapeJsonString(Me.Model) & """"
+    
+    json = "{""model"":""" & cjs.EscapeJsonString(Me.Model) & """"
     json = json & ",""max_tokens"":" & Me.MaxTokens
     If LenB(systemPrompt) <> 0 Then
-        json = json & ",""system"":""" & EscapeJsonString(systemPrompt) & """"
+        json = json & ",""system"":""" & cjs.EscapeJsonString(systemPrompt) & """"
     End If
 
     json = json & ",""messages"":["

@@ -48,6 +48,7 @@ Public TotalCachedTokens As Long
 Public TotalRequests As Long
 Public LastReasoning As String
 
+Private cjs As New CJSON
 Private m_apiKey As String
 Private m_model As String
 Private m_endpoint As String
@@ -214,7 +215,7 @@ Public Function CreateResponse(ByVal inputText As String, Optional ByVal systemP
     ' Pre-escape the new user message; we'll need it both for the request
     ' body and (on success) for the history.
     Dim escapedUser As String
-    escapedUser = EscapeJsonString(inputText)
+    escapedUser = cjs.EscapeJsonString(inputText)
 
     Dim body As String
     body = BuildRequestJson(escapedUser, systemPrompt, maintainContext)
@@ -275,7 +276,7 @@ Public Function CreateResponse(ByVal inputText As String, Optional ByVal systemP
         assistantText = ExtractOutput()    ' uses m_lastResponseRaw
         If LenB(assistantText) > 0 Then
             m_historyRoles.Add "assistant"
-            m_historyTexts.Add EscapeJsonString(assistantText)
+            m_historyTexts.Add cjs.EscapeJsonString(assistantText)
         End If
     End If
 
@@ -314,7 +315,8 @@ End Property
 ' maintainContext - whether to include the historical messages
 Private Function BuildRequestJson(ByVal escapedUser As String, ByVal systemPrompt As String, ByVal maintainContext As Boolean) As String
     Dim json As String
-    json = "{""model"":""" & EscapeJsonString(Me.Model) & """"
+    
+    json = "{""model"":""" & cjs.EscapeJsonString(Me.Model) & """"
     json = json & ",""stream"":false"
     json = json & ",""think"":" & IIf(m_think, "true", "false")
     json = json & ",""keep_alive"":""" & Me.KeepAlive & """"  ' or "-1" to pin it in VRAM until you unload
@@ -325,7 +327,7 @@ Private Function BuildRequestJson(ByVal escapedUser As String, ByVal systemPromp
     first = True
 
     If LenB(systemPrompt) <> 0 Then
-        json = json & "{""role"":""system"",""content"":""" & EscapeJsonString(systemPrompt) & """}"
+        json = json & "{""role"":""system"",""content"":""" & cjs.EscapeJsonString(systemPrompt) & """}"
         first = False
     End If
 
@@ -351,19 +353,6 @@ Private Function BuildRequestJson(ByVal escapedUser As String, ByVal systemPromp
 
     json = json & "}"
     BuildRequestJson = json
-End Function
-
-Private Function EscapeJsonString(ByVal s As String) As String
-    Dim t As String
-    t = s
-    t = Replace$(t, "\", "\\")
-    t = Replace$(t, """", "\""")
-    t = Replace$(t, vbCrLf, "\n")
-    t = Replace$(t, vbCr, "\n")
-    t = Replace$(t, vbLf, "\n")
-    t = Replace$(t, vbTab, "\t")
-    t = Replace$(t, Chr$(0), "")
-    EscapeJsonString = t
 End Function
 
 ' Extracts the assistant text from Ollama's native /api/chat response.
@@ -513,7 +502,7 @@ Public Function CreateResponseWithImage( _
     End If
 
     Dim escapedUser As String
-    escapedUser = EscapeJsonString(inputText)
+    escapedUser = cjs.EscapeJsonString(inputText)
 
     Dim body As String
     body = BuildRequestJsonWithImage(escapedUser, systemPrompt, maintainContext, b64)
@@ -564,7 +553,7 @@ Public Function CreateResponseWithImage( _
         assistantText = ExtractOutput()
         If LenB(assistantText) > 0 Then
             m_historyRoles.Add "assistant"
-            m_historyTexts.Add EscapeJsonString(assistantText)
+            m_historyTexts.Add cjs.EscapeJsonString(assistantText)
         End If
     End If
 
@@ -586,7 +575,8 @@ Private Function BuildRequestJsonWithImage( _
 ) As String
 
     Dim json As String
-    json = "{""model"":""" & EscapeJsonString(Me.Model) & """"
+    
+    json = "{""model"":""" & cjs.EscapeJsonString(Me.Model) & """"
     json = json & ",""stream"":false"
     json = json & ",""think"":" & IIf(m_think, "true", "false")
     json = json & ",""keep_alive"":""" & Me.KeepAlive & """"  ' or "-1" to pin it in VRAM until you unload
@@ -597,7 +587,7 @@ Private Function BuildRequestJsonWithImage( _
     first = True
 
     If LenB(systemPrompt) <> 0 Then
-        json = json & "{""role"":""system"",""content"":""" & EscapeJsonString(systemPrompt) & """}"
+        json = json & "{""role"":""system"",""content"":""" & cjs.EscapeJsonString(systemPrompt) & """}"
         first = False
     End If
 

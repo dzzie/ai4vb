@@ -1,0 +1,3 @@
+js As New CJSON
+js.EscapeJsonString
+EscapeJsonString

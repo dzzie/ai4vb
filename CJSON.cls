@@ -285,6 +285,55 @@ hell:
 
 End Function
 
+' Escapes a VB6 (UTF-16) string for embedding inside a JSON string literal,
+' per RFC 8259. Handles the two structural chars (\ and ") and the FULL C0
+' control range U+0000-U+001F: the five with short forms get them
+' (\b \t \n \f \r), every other control char becomes \u00XX. Everything
+' else - including non-ASCII / multibyte - passes through unchanged and is
+' sent as UTF-8 by MSXML, which is valid JSON.
+'
+' Behavior change vs the old version (deliberate, flagging it):
+'   - byte-faithful: CRLF -> \r\n (two escapes), not collapsed to one \n
+'   - NUL -> \u0000, not silently dropped
+' If you want newline normalization, do it BEFORE calling this. Escaping is
+' not the place for policy.
+Function EscapeJsonString(ByVal s As String) As String
+    Dim n As Long
+    n = Len(s)
+    If n = 0 Then Exit Function
+
+    Dim out As String
+    Dim runStart As Long, i As Long, code As Long
+    Dim repl As String
+
+    runStart = 1
+    For i = 1 To n
+        code = AscW(Mid$(s, i, 1)) And &HFFFF&   ' AscW is signed; mask to unsigned 16-bit
+
+        repl = vbNullString
+        Select Case code
+            Case 34:      repl = "\"""          ' "
+            Case 92:      repl = "\\"           ' \
+            Case 8:       repl = "\b"
+            Case 9:       repl = "\t"
+            Case 10:      repl = "\n"
+            Case 12:      repl = "\f"
+            Case 13:      repl = "\r"
+            Case Is < 32: repl = "\u00" & Right$("0" & Hex$(code), 2)
+        End Select
+
+        If LenB(repl) <> 0 Then
+            ' flush the pending run of safe chars in one Mid$, then the escape
+            If i > runStart Then out = out & Mid$(s, runStart, i - runStart)
+            out = out & repl
+            runStart = i + 1
+        End If
+    Next i
+
+    If n >= runStart Then out = out & Mid$(s, runStart, n - runStart + 1)
+
+    EscapeJsonString = out
+End Function
 
 '--------------------------------------------------------------------------------------------------
 '--------------------  private library functions and embedded sceripts below here  ----------------
@@ -337,7 +386,7 @@ Private Function ReadFile(filename)
   f = FreeFile
   temp = ""
    Open filename For Binary As #f        ' Open file.(can be text or image)
-     temp = Input(FileLen(filename), #f) ' Get entire Files data
+     temp = Input(fileLen(filename), #f) ' Get entire Files data
    Close #f
    ReadFile = temp
 End Function
